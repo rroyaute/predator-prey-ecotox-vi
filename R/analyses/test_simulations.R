@@ -147,6 +147,9 @@ plot(y)
 # Assume x at optimum theta_a & theta_h at dose = 0
 theta_a <- 1
 theta_h <- 1
+# TODO use lognormal formulation from Appendix 5
+curve(from = -10, to = 10, expr = a_max * exp(-(x - theta_a)^2) / (2 * tau^2))
+curve(from = -10, to = 10, expr = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
 
 n_sim <- 1e4
 mu_log <- 0
@@ -172,8 +175,8 @@ df_sim <- data.frame(Concentration = c,
   mutate(log_x = rnorm(n(), log_x_hat, sd_log)) %>% 
   mutate(x_hat = exp(log_x_hat),
          x = exp(log_x)) %>% 
-  mutate(a = a_max * exp(-(x - theta_a)) / (2 * tau^2),
-         h = h_max - (h_min - h_max) * exp(-(x - theta_h)) / (2 * nu^2))
+  mutate(a = a_max * exp(-(x - theta_a)^2) / (2 * tau^2),
+         h = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
 
 df_sim %>% 
   ggplot(aes(x = Concentration, y = x)) +
