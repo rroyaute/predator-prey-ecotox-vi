@@ -145,9 +145,49 @@ plot(y)
 
 # 3. Modeling a dose-response on x ----
 # Assume x at optimum theta_a & theta_h at dose = 0
+theta_a <- 1
+theta_h <- 1
+
 n_sim <- 1e4
-log_x <- rnorm(n = n_sim, mean = 0, sd = .3)
+mu_log <- 0
+sd_log <- .1
+log_x <- rnorm(n = n_sim, mean = mu_log, sd = sd_log)
 hist(log_x); hist(exp(log_x)) 
 
+# dose gradient
+c <- seq(0, 100, by = 1)
+c[1] <- 1e-4 # replace 0 with small non-negative value
+# dr parameters
+max <- 0
+min <- -10
+ec50 <- 40
+beta <- -1.5
 
+log_x_hat <- max + (min - max) / (1 + exp((ec50 - c) * exp(beta)))
+plot(c, log_x_hat, type = "l")
+plot(c, exp(log_x_hat), type = "l")
 
+df_sim <- data.frame(Concentration = c,
+                     log_x_hat) %>% 
+  mutate(log_x = rnorm(n(), log_x_hat, sd_log)) %>% 
+  mutate(x_hat = exp(log_x_hat),
+         x = exp(log_x)) %>% 
+  mutate(a = a_max * exp(-(x - theta_a)) / (2 * tau^2),
+         h = h_max - (h_min - h_max) * exp(-(x - theta_h)) / (2 * nu^2))
+
+df_sim %>% 
+  ggplot(aes(x = Concentration, y = x)) +
+  geom_point() +
+  geom_line(aes(x = Concentration, y = x_hat), 
+            color = "red", linewidth = 1.5) +
+  theme_bw()
+
+df_sim %>% 
+  ggplot(aes(x = Concentration, y = a)) +
+  geom_point() +
+  theme_bw()
+
+df_sim %>% 
+  ggplot(aes(x = Concentration, y = h)) +
+  geom_point() +
+  theme_bw()
