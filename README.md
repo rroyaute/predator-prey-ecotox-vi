@@ -1,20 +1,15 @@
-# Template pour dépots github
+# Code repository for "Influence of individual variation in predator behavior under contaminant stress for population dynamic stability"
 
-# Suggestion d'organisation des fichiers
-- `data/` Fichiers de données (brutes et après traitement)
-    -  `data-raw`
-    - `data-clean`
+# File organisation
+- `data/` Data files for storing simulation results
 - `R` Scripts R
-     - `funs` scripts pour fonctions
-     - `sims` scripts pour simulations
-     - `analyses` scripts pour analyses de données
-- `outputs/` Sorties des scripts R
+     - `funs` useful functions
+     - `analyses` scripts for running simulations and their analyses
+- `outputs/` R scripts outputs
     - `fig` Figures
-    - `mods` Modèles sauvegardés
-        - `sims` Modèles pour simulations
-        - `analysis` Modèles pour anayse des données
-    - `quarto` Rapports Quarto
-- `docs` Pages html pour rapports Quarto
+    - `tab` Tables
+    - `quarto` Quarto notebooks for explanatory tutorials
+- `docs` html pages for Quarto notebooks
 
-# Lien pour rapport Quarto
+# Links to Quarto notebooks
 https://rroyaute.github.io/gh-template-rr/
