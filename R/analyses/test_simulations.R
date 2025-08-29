@@ -1,4 +1,4 @@
-library(odin); library(tidyverse)
+library(odin); library(tidyverse); library(ggthemes)
 
 # 1. Rosenzweig-MacArthur Consummer-Resource model without variation ----
 # Calculate parameters a and h according to Gibert & Brassil 2014
@@ -52,7 +52,7 @@ t <- seq(0, 1000, by = .5)
 y <- mod$run(t)
 plot(y)
 
-y %>% 
+fig_pred_prey_rm <- y %>% 
   as.data.frame() %>% 
   pivot_longer(cols = c("R", "C"),
                names_to = "Density_type",
@@ -60,9 +60,11 @@ y %>%
   ggplot(aes(x = t, y = Density, 
              group = Density_type, 
              color = Density_type)) +
-  geom_line() +
+  geom_line(linewidth = .7) +
+  scale_color_wsj() +
   theme_bw()
-
+fig_pred_prey_rm
+ggsave("outputs/figs/fig_pred_prey_rm.jpeg", fig_pred_prey_rm)
 
 
 # 2. Adding individual variation -----
@@ -153,7 +155,7 @@ curve(from = -10, to = 10, expr = h_max - (h_max - h_min) * exp(-(x - theta_h)^2
 
 n_sim <- 1e4
 mu_log <- 0
-sd_log <- .1
+sd_log <- .3
 log_x <- rnorm(n = n_sim, mean = mu_log, sd = sd_log)
 hist(log_x); hist(exp(log_x)) 
 
@@ -178,19 +180,44 @@ df_sim <- data.frame(Concentration = c,
   mutate(a = a_max * exp(-(x - theta_a)^2) / (2 * tau^2),
          h = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
 
-df_sim %>% 
+fig_drc_x <- df_sim %>% 
   ggplot(aes(x = Concentration, y = x)) +
   geom_point() +
   geom_line(aes(x = Concentration, y = x_hat), 
             color = "red", linewidth = 1.5) +
+  ylab("Behavioral trait (x)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral expression") +
   theme_bw()
+fig_drc_x  
 
-df_sim %>% 
+fig_drc_a <- df_sim %>% 
   ggplot(aes(x = Concentration, y = a)) +
   geom_point() +
+  ylab("Attack rate (a)") +
+  ggtitle("Effect of contaminant concentration \n on attack rates") +
   theme_bw()
+fig_drc_a
 
-df_sim %>% 
+fig_drc_h <- df_sim %>% 
   ggplot(aes(x = Concentration, y = h)) +
   geom_point() +
+  ylab("Handling time (h)") +
+  ggtitle("Effect of contaminant concentration \n on handling time") +
   theme_bw()
+fig_drc_h
+
+ggsave("outputs/figs/fig_drc_x.jpeg", fig_drc_x)
+ggsave("outputs/figs/fig_drc_a.jpeg", fig_drc_a)
+ggsave("outputs/figs/fig_drc_h.jpeg", fig_drc_h)
+
+
+# 4. Add a dose response on sigma^2 as well -----
+sigma0 <- log(sd_log)
+s1 <-  .05
+s2 <- -.002
+log_sigma_hat <- sigma0 + s1 * c + s2 * c^2
+plot(c, log_sigma_hat, type = "l")
+plot(c, exp(log_sigma_hat), type = "l")
+
+
+
