@@ -150,7 +150,6 @@ plot(y)
 # Assume x at optimum theta_a & theta_h at dose = 0
 theta_a <- 1
 theta_h <- 1
-# TODO use lognormal formulation from Appendix 5
 curve(from = -10, to = 10, expr = a_max * exp(-(x - theta_a)^2) / (2 * tau^2))
 curve(from = -10, to = 10, expr = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
 
@@ -212,7 +211,7 @@ ggsave("outputs/figs/fig_drc_a.jpeg", fig_drc_a)
 ggsave("outputs/figs/fig_drc_h.jpeg", fig_drc_h)
 
 
-# 4. Add a dose response on sigma^2 as well -----
+# 4. Add a dose response on sigma^2 -----
 sigma0 <- log(sd_log)
 s1 <-  .06
 s2 <- -.002
@@ -278,3 +277,239 @@ fig_drc_vi <- fig_drc_x_vi / fig_drc_a_vi / fig_drc_h_vi
 fig_drc_vi_4pan <- fig_drc_vi | fig_drc_sigma_vi
 ggsave("outputs/figs/fig_drc_vi_4pan.jpeg", fig_drc_vi_4pan, 
        height = 8, width = 8.5)
+
+# 5. Use lognormal formulation from Appendix 4 & 5 ----
+## 5.1 Mean dose-response -----
+# log form
+curve(from = 0, to = 10, expr = a_max * exp(-(log(x) - log(theta_a))^2) / (2 * tau^2))
+curve(from = 0, to = 10, expr = h_max - (h_max - h_min) * exp(-(log(x) - log(theta_h))^2) / (2 * nu^2))
+
+x_location <- 1
+x_scale_low <- .3
+x_scale_high <- 1
+x_sigma_low <- rlnorm(n = n_sim, meanlog = x_location, sdlog = x_scale_low)
+x_sigma_high <- rlnorm(n = n_sim, meanlog = x_location, sdlog = x_scale_high)
+hist(x_sigma_low); hist(x_sigma_high)
+
+# dose gradient
+c <- seq(0, 100, by = 1)
+c[1] <- 1e-4 # replace 0 with small non-negative value
+# dr parameters
+max <- 0
+min <- -10
+ec50 <- 40
+beta <- -1.5
+
+# dose-response on x
+log_x_hat <- max + (min - max) / (1 + exp((ec50 - c) * exp(beta)))
+plot(c, log_x_hat, type = "l")
+plot(c, exp(log_x_hat), type = "l")
+
+df_sim <- data.frame(Concentration = c,
+                     log_x_hat) %>% 
+  mutate(x = rlnorm(n(), log_x_hat, x_scale_high)) %>% 
+  mutate(x_hat = exp(log_x_hat)) %>% 
+  mutate(a = a_max * exp(-(x - theta_a)^2) / (2 * tau^2),
+         h = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
+
+fig_drc_x <- df_sim %>% 
+  ggplot(aes(x = Concentration, y = x)) +
+  geom_point() +
+  geom_line(aes(x = Concentration, y = x_hat), 
+            color = "red", linewidth = 1.5) +
+  ylab("Behavioral trait (x)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral expression") +
+  theme_bw()
+fig_drc_x  
+
+fig_drc_a <- df_sim %>% 
+  ggplot(aes(x = Concentration, y = a)) +
+  geom_point() +
+  ylab("Attack rate (a)") +
+  ggtitle("Effect of contaminant concentration \n on attack rates") +
+  theme_bw()
+fig_drc_a
+
+fig_drc_h <- df_sim %>% 
+  ggplot(aes(x = Concentration, y = h)) +
+  geom_point() +
+  ylab("Handling time (h)") +
+  ggtitle("Effect of contaminant concentration \n on handling time") +
+  theme_bw()
+fig_drc_h
+
+## 5.2 Variance dose-response ----
+sigma0_low <- x_scale_low
+sigma0_high <- x_scale_high
+s1 <-  .06
+s2 <- -.002
+log_sigma_low <- sigma0_low + s1 * c + s2 * c^2
+log_sigma_high <- sigma0_high + s1 * c + s2 * c^2
+
+plot(c, log_sigma_low, type = "l")
+plot(c, log_sigma_high, type = "l")
+
+plot(c, exp(log_sigma_low), type = "l")
+plot(c, exp(log_sigma_high), type = "l")
+
+# Combine mean and variance dose-response
+### 5.2.1 Low variation ----
+df_sim_vi_low <- data.frame(Concentration = c,
+                        log_x_hat,
+                        sd_log_hat = exp(log_sigma_low)) %>%
+  mutate(x = rlnorm(n(), log_x_hat, x_scale_low)) %>% 
+  mutate(x_hat = exp(log_x_hat)) %>% 
+  mutate(a = a_max * exp(-(x - theta_a)^2) / (2 * tau^2),
+         h = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
+
+fig_drc_x_vi_low <- df_sim_vi_low %>% 
+  ggplot(aes(x = Concentration, y = x)) +
+  geom_point() +
+  geom_line(aes(x = Concentration, y = x_hat), 
+            color = "red", linewidth = 1.5) +
+  ylab("Behavioral trait (x)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral expression",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_x_vi_low  
+
+fig_drc_a_vi_low <- df_sim_vi_low %>% 
+  ggplot(aes(x = Concentration, y = a)) +
+  geom_point() +
+  ylab("Attack rate (a)") +
+  ggtitle("Effect of contaminant concentration \n on attack rates",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_a_vi_low
+
+fig_drc_h_vi_low <- df_sim_vi_low %>% 
+  ggplot(aes(x = Concentration, y = h)) +
+  geom_point() +
+  ylab("Handling time (h)") +
+  ggtitle("Effect of contaminant concentration \n on handling time",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_h_vi_low
+
+fig_drc_sigma_vi_low <- df_sim_vi_low %>% 
+  ggplot(aes(x = Concentration, y = sd_log_hat)) +
+  geom_line(color = "red", linewidth = 1.5) +
+  ylab("Behavioral variance (sigma^2)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral variance") +
+  theme_bw()
+fig_drc_sigma_vi_low 
+
+### 5.2.1 High variation ----
+df_sim_vi_high <- data.frame(Concentration = c,
+                            log_x_hat,
+                            sd_log_hat = exp(log_sigma_high)) %>%
+  mutate(x = rlnorm(n(), log_x_hat, x_scale_high)) %>% 
+  mutate(x_hat = exp(log_x_hat)) %>% 
+  mutate(a = a_max * exp(-(x - theta_a)^2) / (2 * tau^2),
+         h = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
+
+fig_drc_x_vi_high <- df_sim_vi_high %>% 
+  ggplot(aes(x = Concentration, y = x)) +
+  geom_point() +
+  geom_line(aes(x = Concentration, y = x_hat), 
+            color = "red", linewidth = 1.5) +
+  ylab("Behavioral trait (x)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral expression",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_x_vi_high  
+
+fig_drc_a_vi_high <- df_sim_vi_high %>% 
+  ggplot(aes(x = Concentration, y = a)) +
+  geom_point() +
+  ylab("Attack rate (a)") +
+  ggtitle("Effect of contaminant concentration \n on attack rates",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_a_vi_high
+
+fig_drc_h_vi_high <- df_sim_vi_high %>% 
+  ggplot(aes(x = Concentration, y = h)) +
+  geom_point() +
+  ylab("Handling time (h)") +
+  ggtitle("Effect of contaminant concentration \n on handling time",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_h_vi_high
+
+fig_drc_sigma_vi_high <- df_sim_vi_high %>% 
+  ggplot(aes(x = Concentration, y = sd_log_hat)) +
+  geom_line(color = "red", linewidth = 1.5) +
+  ylab("Behavioral variance (sigma^2)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral variance") +
+  theme_bw()
+fig_drc_sigma_vi_high 
+
+### 5.2.3 Combine in one figure ----
+fig_low_high_vi <- (fig_drc_x_vi_low + fig_drc_x_vi_high) /
+  (fig_drc_a_vi_low + fig_drc_a_vi_high) /
+  (fig_drc_h_vi_low + fig_drc_h_vi_high) |
+  (fig_drc_sigma_vi_low / fig_drc_sigma_vi_high)
+ggsave("outputs/figs/fig_low_high_vi.jpeg", fig_low_high_vi, 
+       height = 8, width = 8.5)
+
+# 6. TODO: Compare dose-responses for low vs. high values of sigma0 ----
+sd_log <- 5.5
+sigma0 <- log(sd_log)
+s1 <-  .06
+s2 <- -.002
+log_sigma <- sigma0 + s1 * c + s2 * c^2
+plot(c, log_sigma, type = "l")
+plot(c, exp(log_sigma), type = "l")
+
+df_sim_vi <- data.frame(Concentration = c,
+                        log_x_hat,
+                        sd_log = exp(log_sigma)) %>% 
+  mutate(log_x = rnorm(n(), log_x_hat, sd_log)) %>% 
+  mutate(x_hat = exp(log_x_hat),
+         x = exp(log_x)) %>% 
+  mutate(a = a_max * exp(-(x - theta_a)^2) / (2 * tau^2),
+         h = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
+
+fig_drc_x_vi <- df_sim_vi %>% 
+  ggplot(aes(x = Concentration, y = x)) +
+  geom_point() +
+  geom_line(aes(x = Concentration, y = x_hat), 
+            color = "red", linewidth = 1.5) +
+  ylab("Behavioral trait (x)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral expression",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_x_vi  
+
+fig_drc_a_vi <- df_sim_vi %>% 
+  ggplot(aes(x = Concentration, y = a)) +
+  geom_point() +
+  ylab("Attack rate (a)") +
+  ggtitle("Effect of contaminant concentration \n on attack rates",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_a_vi
+
+fig_drc_h_vi <- df_sim_vi %>% 
+  ggplot(aes(x = Concentration, y = h)) +
+  geom_point() +
+  ylab("Handling time (h)") +
+  ggtitle("Effect of contaminant concentration \n on handling time",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_h_vi
+
+fig_drc_sigma_vi <- df_sim_vi %>% 
+  ggplot(aes(x = Concentration, y = sd_log^2)) +
+  geom_line(color = "red", linewidth = 1.5) +
+  ylab("Behavioral variance (sigma^2)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral variance") +
+  theme_bw()
+fig_drc_sigma_vi  
+
+# 6. Convert phenotypic mismatch into ECx ----
+# 7. Run simulations ----
+
+crossing(sigma0 = seq(0, 6, by = .1),
+         ecx = seq(0, 100, by = .5))
