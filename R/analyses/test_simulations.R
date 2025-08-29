@@ -1,4 +1,5 @@
 library(odin); library(tidyverse); library(ggthemes)
+library(patchwork)
 
 # 1. Rosenzweig-MacArthur Consummer-Resource model without variation ----
 # Calculate parameters a and h according to Gibert & Brassil 2014
@@ -213,11 +214,67 @@ ggsave("outputs/figs/fig_drc_h.jpeg", fig_drc_h)
 
 # 4. Add a dose response on sigma^2 as well -----
 sigma0 <- log(sd_log)
-s1 <-  .05
+s1 <-  .06
 s2 <- -.002
-log_sigma_hat <- sigma0 + s1 * c + s2 * c^2
-plot(c, log_sigma_hat, type = "l")
-plot(c, exp(log_sigma_hat), type = "l")
+log_sigma <- sigma0 + s1 * c + s2 * c^2
+plot(c, log_sigma, type = "l")
+plot(c, exp(log_sigma), type = "l")
 
+# Combine mean and variance dose-response
+df_sim_vi <- data.frame(Concentration = c,
+                     log_x_hat,
+                     sd_log = exp(log_sigma)) %>% 
+  mutate(log_x = rnorm(n(), log_x_hat, sd_log)) %>% 
+  mutate(x_hat = exp(log_x_hat),
+         x = exp(log_x)) %>% 
+  mutate(a = a_max * exp(-(x - theta_a)^2) / (2 * tau^2),
+         h = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
 
+fig_drc_x_vi <- df_sim_vi %>% 
+  ggplot(aes(x = Concentration, y = x)) +
+  geom_point() +
+  geom_line(aes(x = Concentration, y = x_hat), 
+            color = "red", linewidth = 1.5) +
+  ylab("Behavioral trait (x)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral expression",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_x_vi  
 
+fig_drc_a_vi <- df_sim_vi %>% 
+  ggplot(aes(x = Concentration, y = a)) +
+  geom_point() +
+  ylab("Attack rate (a)") +
+  ggtitle("Effect of contaminant concentration \n on attack rates",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_a_vi
+
+fig_drc_h_vi <- df_sim_vi %>% 
+  ggplot(aes(x = Concentration, y = h)) +
+  geom_point() +
+  ylab("Handling time (h)") +
+  ggtitle("Effect of contaminant concentration \n on handling time",
+          subtitle = "Case where both mean and behavioral variance is affected") +
+  theme_bw()
+fig_drc_h_vi
+
+fig_drc_sigma_vi <- df_sim_vi %>% 
+  ggplot(aes(x = Concentration, y = sd_log^2)) +
+  geom_line(color = "red", linewidth = 1.5) +
+  ylab("Behavioral variance (sigma^2)") +
+  ggtitle("Effect of contaminant concentration \n on behavioral variance") +
+  theme_bw()
+fig_drc_sigma_vi  
+
+ggsave("outputs/figs/fig_drc_x_vi.jpeg", fig_drc_x_vi)
+ggsave("outputs/figs/fig_drc_a_vi.jpeg", fig_drc_a_vi)
+ggsave("outputs/figs/fig_drc_h_vi.jpeg", fig_drc_h_vi)
+ggsave("outputs/figs/fig_drc_sigma_vi.jpeg", fig_drc_sigma_vi)
+
+# Combine in one big plot
+# fig_drc <- fig_drc_x / fig_drc_a / fig_drc_h
+fig_drc_vi <- fig_drc_x_vi / fig_drc_a_vi / fig_drc_h_vi
+fig_drc_vi_4pan <- fig_drc_vi | fig_drc_sigma_vi
+ggsave("outputs/figs/fig_drc_vi_4pan.jpeg", fig_drc_vi_4pan, 
+       height = 8, width = 8.5)
