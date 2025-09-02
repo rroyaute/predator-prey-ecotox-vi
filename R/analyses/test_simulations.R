@@ -144,7 +144,7 @@ RM_model_vi_mod <- RM_model_vi$new(user = pars)
 
 t <- seq(0, 1000, by = .5)
 y <- RM_model_vi_mod$run(t)
-plot(y)
+# plot(y)
 
 # 3. Modeling a dose-response on x ----
 # Assume x at optimum theta_a & theta_h at dose = 0
@@ -447,67 +447,12 @@ fig_drc_sigma_vi_high
 
 ### 5.2.3 Combine in one figure ----
 fig_low_high_vi <- (fig_drc_x_vi_low + fig_drc_x_vi_high) /
+  (fig_drc_sigma_vi_low + fig_drc_sigma_vi_high) /
   (fig_drc_a_vi_low + fig_drc_a_vi_high) /
-  (fig_drc_h_vi_low + fig_drc_h_vi_high) |
-  (fig_drc_sigma_vi_low / fig_drc_sigma_vi_high)
+  (fig_drc_h_vi_low + fig_drc_h_vi_high)
+  
 ggsave("outputs/figs/fig_low_high_vi.jpeg", fig_low_high_vi, 
        height = 8, width = 8.5)
-
-# 6. TODO: Compare dose-responses for low vs. high values of sigma0 ----
-sd_log <- 5.5
-sigma0 <- log(sd_log)
-s1 <-  .06
-s2 <- -.002
-log_sigma <- sigma0 + s1 * c + s2 * c^2
-plot(c, log_sigma, type = "l")
-plot(c, exp(log_sigma), type = "l")
-
-df_sim_vi <- data.frame(Concentration = c,
-                        log_x_hat,
-                        sd_log = exp(log_sigma)) %>% 
-  mutate(log_x = rnorm(n(), log_x_hat, sd_log)) %>% 
-  mutate(x_hat = exp(log_x_hat),
-         x = exp(log_x)) %>% 
-  mutate(a = a_max * exp(-(x - theta_a)^2) / (2 * tau^2),
-         h = h_max - (h_max - h_min) * exp(-(x - theta_h)^2) / (2 * nu^2))
-
-fig_drc_x_vi <- df_sim_vi %>% 
-  ggplot(aes(x = Concentration, y = x)) +
-  geom_point() +
-  geom_line(aes(x = Concentration, y = x_hat), 
-            color = "red", linewidth = 1.5) +
-  ylab("Behavioral trait (x)") +
-  ggtitle("Effect of contaminant concentration \n on behavioral expression",
-          subtitle = "Case where both mean and behavioral variance is affected") +
-  theme_bw()
-fig_drc_x_vi  
-
-fig_drc_a_vi <- df_sim_vi %>% 
-  ggplot(aes(x = Concentration, y = a)) +
-  geom_point() +
-  ylab("Attack rate (a)") +
-  ggtitle("Effect of contaminant concentration \n on attack rates",
-          subtitle = "Case where both mean and behavioral variance is affected") +
-  theme_bw()
-fig_drc_a_vi
-
-fig_drc_h_vi <- df_sim_vi %>% 
-  ggplot(aes(x = Concentration, y = h)) +
-  geom_point() +
-  ylab("Handling time (h)") +
-  ggtitle("Effect of contaminant concentration \n on handling time",
-          subtitle = "Case where both mean and behavioral variance is affected") +
-  theme_bw()
-fig_drc_h_vi
-
-fig_drc_sigma_vi <- df_sim_vi %>% 
-  ggplot(aes(x = Concentration, y = sd_log^2)) +
-  geom_line(color = "red", linewidth = 1.5) +
-  ylab("Behavioral variance (sigma^2)") +
-  ggtitle("Effect of contaminant concentration \n on behavioral variance") +
-  theme_bw()
-fig_drc_sigma_vi  
-
 # 6. Convert phenotypic mismatch into ECx ----
 # 7. Run simulations ----
 
