@@ -10,6 +10,9 @@
     - `tab` Tables
     - `quarto` Quarto notebooks for explanatory tutorials
 - `docs` html pages for Quarto notebooks
+- `test_aubin` Test codes from Aubin
+    - `test.nb` Example of Jacobian method on classical model (constant $\alpha$ and $\eta$)
+    - `method_jacob.nb` Application of Jacobian method to reproduce Figure 3
 
 # Links to Quarto notebooks
 https://rroyaute.github.io/gh-template-rr/
