@@ -1,12 +1,29 @@
-
+#! /usr/bin/env julia
 # --- PLOTTING ---
 using Plots
 using Colors
 using JLD2
+using CSV
+using DataFrames
 
 # --- LOAD DATA ---
-@load "classification_data.jld2" data d_vals sigma_vals
-println("Data loaded successfully.")
+datadir = "../outputs/data"
+plotdir = "../outputs/figs"
+plotname = "fig_3_repro_julia.pdf"
+filenames = ["fig_3_data_julia.csv", "fig_3_d_vals.csv", "fig_3_sigma_vals.csv"]
+dataname, dname, sigmaname = filenames
+datafile = joinpath(datadir, dataname)
+dfile = joinpath(datadir, dname)
+sigmafile = joinpath(datadir, sigmaname)
+plotfile = joinpath(plotdir, plotname)
+isdir(plotdir) || mdkir(plotdir)
+df_data = CSV.read(datafile, DataFrame)
+d_vals = CSV.read(dfile, DataFrame)[:, 1]
+sigma_vals = CSV.read(sigmafile, DataFrame)[:, 1]
+data = Matrix(df_data)
+println("CSV files loaded successfully.")
+# @load "classification_data.jld2" data d_vals sigma_vals
+# println("Data loaded successfully.")
 
 # --- COLOR MAPPING ---
 palette = [
@@ -69,5 +86,5 @@ for i in 1:4
 end
 
 # --- SAVE ---
-savefig(plt, "classification_plot.pdf")
-println("Plot saved to classification_plot.pdf")
+savefig(plt, plotfile)
+println("Plot saved to $plotfile.")

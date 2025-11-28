@@ -1,12 +1,26 @@
+#! /usr/bin/env julia
 using Distributed
 using Dates
 using JLD2
+using CSV
+using DataFrames
+
+outdir = "../outputs/data"
+isdir(outdir) || mkpath(outdir)
+N = Sys.CPU_THREADS # total threads
+workers = N - 1
+filenames = ["fig_3_data_julia.csv", "fig_3_d_vals.csv", "fig_3_sigma_vals.csv"]
+dataname, dname, sigmaname = filenames
+datafile = joinpath(outdir, dataname)
+dfile = joinpath(outdir, dname)
+sigmafile = joinpath(outdir, sigmaname)
 
 d_vals = range(0, stop=2.5, step=0.005)
 sigma_vals = range(0.01, stop=6, step=0.01)
 
 # Add worker processes
-addprocs(13)  # 14 cores available
+addprocs(workers)
+@info "Added $(workers) workers"
 @everywhere using QuadGK, Roots, LinearAlgebra
 @everywhere include("method_jacob.jl")
 
@@ -37,7 +51,17 @@ println("Elapsed time: $(Dates.value(elapsed)/1e3) seconds (~$(Dates.value(elaps
 
 # --- RESHAPE RESULTS ---
 data = reshape(results_flat, length(d_vals), length(sigma_vals))
+df_data = DataFrame(data, :auto)
 
-# --- SAVE TO FILE ---
-@save "classification_data.jld2" data d_vals sigma_vals
-println("Data saved to classification_data.jld2")
+# --- SAVE TO CSV FILES ---
+CSV.write(datafile, df_data)
+CSV.write(dfile, DataFrame(d=d_vals))
+CSV.write(sigmafile, DataFrame(sigma=sigma_vals))
+println("CSV files saved:")
+println("    -> $datafile")
+println("    -> $dfile")
+println("    -> $sigmafile")
+
+# --- SAVE TO JLD2 FILE ---
+# @save "classification_data.jld2" data d_vals sigma_vals
+# println("Data saved to classification_data.jld2")
