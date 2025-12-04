@@ -3,6 +3,7 @@ using Plots
 using StatsPlots
 using Colors
 using LaTeXStrings
+using CSV
 
 include("dose_response.jl")
 
@@ -130,9 +131,9 @@ function plot_dose_response(summary_pos, summary_neg, summary_null, col_pos, col
     return p_mean
 end
 
-col_pos = RGB(0.01, 0.39, 0.57)
-col_neg = RGB(0.78, 0.18, 0.16)
-col_null = RGB(0.13, 0.59, 0.12)
+color_pos = RGB(0.01, 0.39, 0.57)
+color_neg = RGB(0.78, 0.18, 0.16)
+color_null = RGB(0.13, 0.59, 0.12)
 
 x_0 = 4.5
 beta = -0.5
@@ -146,43 +147,168 @@ sigma = 0.08
 
 Random.seed!(42)
 
-# --- Warming up of functions --- #
+# --- WARMING UP FUNCTIONS --- #
 
-println("Warming up of functions...")
+println("Warming up functions...")
 
 individuals_pos = generate_individuals(x_0, NEC, CV_x, CV_nec, rho, 10)
 individuals_neg = generate_individuals(x_0, NEC, CV_x, CV_nec, -rho, 10)
 individuals_null = generate_individuals(x_0, NEC, CV_x, CV_nec, 0, 10)
 
-scatter_plot, hist_plot = plot_distrib(individuals_pos, individuals_neg, individuals_null, col_pos, col_neg, col_null)
+# scatter_plot, hist_plot = plot_distrib(individuals_pos, individuals_neg, individuals_null, color_pos, color_neg, color_null)
 
 summary_pos = simulate_dose_response(individuals_pos, Dose, beta, sigma)
 summary_neg = simulate_dose_response(individuals_neg, Dose, beta, sigma)
 summary_null = simulate_dose_response(individuals_null, Dose, beta, sigma)
 
-summary_plot = plot_dose_response(summary_pos, summary_neg, summary_null, col_pos, col_neg, col_null)
+# summary_plot = plot_dose_response(summary_pos, summary_neg, summary_null, color_pos, color_neg, color_null)
 
 println("Warming up complete.")
 
-# --- Main code --- #
+# --- MAIN CODE ---
 
 individuals_pos = generate_individuals(x_0, NEC, CV_x, CV_nec, rho, n_id)
 individuals_neg = generate_individuals(x_0, NEC, CV_x, CV_nec, -rho, n_id)
 individuals_null = generate_individuals(x_0, NEC, CV_x, CV_nec, 0, n_id)
 
-scatter_plot, hist_plot = plot_distrib(individuals_pos, individuals_neg, individuals_null, col_pos, col_neg, col_null)
+# scatter_plot, hist_plot = plot_distrib(individuals_pos, individuals_neg, individuals_null, col_pos, col_neg, col_null)
 
 summary_pos = simulate_dose_response(individuals_pos, Dose, beta, sigma)
 summary_neg = simulate_dose_response(individuals_neg, Dose, beta, sigma)
 summary_null = simulate_dose_response(individuals_null, Dose, beta, sigma)
 
-summary_plot = plot_dose_response(summary_pos, summary_neg, summary_null, col_pos, col_neg, col_null)
-
+# summary_plot = plot_dose_response(summary_pos, summary_neg, summary_null, col_pos, col_neg, col_null)
 
 plot_dir = "../outputs/figs"
-savefig(scatter_plot, joinpath(plot_dir, "scatter_plot_distrib_x_NEC.pdf"))
-println("Scatter plot of distributions saved as scatter_plot_distrib_x_NEC.pdf.")
-savefig(hist_plot, joinpath(plot_dir, "hist_plot_distrib_x_NEC.pdf"))
-println("Histrogram of x and NEC distributions saved as hist_plot_distrib_x_NEC.pdf.")
-savefig(summary_plot, joinpath(plot_dir, "summary_plot_dose_response.pdf"))
-println("Dose-response of x (mean and std) saved as summary_plot_dose_response.pdf.")
+# savefig(scatter_plot, joinpath(plot_dir, "scatter_plot_distrib_x_NEC.pdf"))
+# println("Scatter plot of distributions saved as scatter_plot_distrib_x_NEC.pdf.")
+# savefig(hist_plot, joinpath(plot_dir, "hist_plot_distrib_x_NEC.pdf"))
+# println("Histrogram of x and NEC distributions saved as hist_plot_distrib_x_NEC.pdf.")
+# savefig(summary_plot, joinpath(plot_dir, "summary_plot_dose_response.pdf"))
+# println("Dose-response of x (mean and std) saved as summary_plot_dose_response.pdf.")
+
+println("Computation done.")
+
+# --- ADDING D VALUES ---
+summary_pos[!, "d"] = abs.(summary_pos.yhat_mean .- x_0)
+summary_neg[!, "d"] = abs.(summary_neg.yhat_mean .- x_0)
+summary_null[!, "d"] = abs.(summary_null.yhat_mean .- x_0)
+
+# --- GETTING CROPPED VALUES ---
+coords_pos = summary_pos[summary_pos.d .<= 2.5, ["yhat_SD", "d"]]
+coords_neg = summary_neg[summary_neg.d .<= 2.5, ["yhat_SD", "d"]]
+coords_null = summary_null[summary_null.d .<= 2.5, ["yhat_SD", "d"]]
+
+# --- GETTING SPECIAL VALUES ---
+function get_special_values(summary, NEC, x_0)
+    coords_NEC = summary[summary.Dose .== NEC, ["yhat_SD", "d"]]
+    coords_EC50 = first(summary[summary.d .>= x_0/2, ["yhat_SD", "d"]], 1)
+    return coords_NEC, coords_EC50
+end
+coords_NEC_pos, coords_EC50_pos = get_special_values(summary_pos, NEC, x_0)
+coords_NEC_neg, coords_EC50_neg = get_special_values(summary_neg, NEC, x_0)
+coords_NEC_null, coords_EC50_null = get_special_values(summary_null, NEC, x_0)
+coords_NEC = DataFrame(yhat_SD = [coords_NEC_pos.yhat_SD[1], coords_NEC_neg.yhat_SD[1], coords_NEC_null.yhat_SD[1]],
+                       d = [coords_NEC_pos.d[1], coords_NEC_neg.d[1], coords_NEC_null.d[1]])
+coords_EC50 = DataFrame(yhat_SD = [coords_EC50_pos.yhat_SD[1], coords_EC50_neg.yhat_SD[1], coords_EC50_null.yhat_SD[1]],
+                        d = [coords_EC50_pos.d[1], coords_EC50_neg.d[1], coords_EC50_null.d[1]])
+
+# --- LOAD DATA ---
+datadir = "../outputs/data"
+plotdir = "../outputs/figs"
+plotname = "fig_3_repro_julia.pdf"
+filenames = ["fig_3_data_julia.csv", "fig_3_d_vals.csv", "fig_3_sigma_vals.csv"]
+dataname, dname, sigmaname = filenames
+datafile = joinpath(datadir, dataname)
+dfile = joinpath(datadir, dname)
+sigmafile = joinpath(datadir, sigmaname)
+plotfile = joinpath(plotdir, plotname)
+isdir(plotdir) || mdkir(plotdir)
+df_data = CSV.read(datafile, DataFrame)
+d_vals = CSV.read(dfile, DataFrame)[:, 1]
+sigma_vals = CSV.read(sigmafile, DataFrame)[:, 1]
+data = Matrix(df_data)
+println("CSV files loaded successfully.")
+
+# --- COLOR MAPPING ---
+palette = [
+    colorant"black",       # 0: Noncoexistence
+    colorant"white",       # 1: Coexistence: nonoscillatory
+    colorant"lightgray",   # 2: Coexistence: damped oscillations
+    colorant"gray"         # 3: Coexistence: limit cycles
+]
+
+labels = [
+    "Noncoexistence",
+    "Coexistence: nonoscillatory",
+    "Coexistence: damped oscillations",
+    "Coexistence: limit cycles"
+]
+
+# Convert integer matrix to colors
+color_data = [palette[v+1] for v in data]  # Julia indices start at 1
+
+# Plot
+plt = heatmap(
+              sigma_vals,
+              d_vals,
+              color_data,
+              yflip = false,
+              ylims = (0, 2.5),
+            #   yticks = (d_tick_indices, d_labels),
+            #   xticks = (sigma_tick_indices, sigma_labels),
+              ylabel = "Phenotypic mismatch (d²)",
+              xlabel = "Individual variation (σ²)",
+              aspect_ratio = 1/1.5,
+              size = (1000, 600),
+              left_margin = 10Plots.mm,
+              right_margin = 20Plots.mm,
+              c = palette,
+              legend = :outerright,
+              legendfontsize = 12,
+              grid = false,
+              framestyle = :box,
+)
+
+# --- ADD LINES OF MEAN AND STD WITH VARYING DOSE ---
+plot!(plt, coords_pos.yhat_SD, coords_pos.d,
+     color = color_pos,
+     linestyle = :solid,
+     linewidth = 2,
+     label = "Positive cov"
+)
+plot!(plt, coords_neg.yhat_SD, coords_neg.d,
+     color = color_neg,
+     linestyle = :solid,
+     linewidth = 2,
+     label = "Negative cov"
+)
+plot!(plt, coords_null.yhat_SD, coords_null.d,
+     color = color_null,
+     linestyle = :solid,
+     linewidth = 2,
+     label = "No cov"
+)
+
+scatter!(plt, coords_NEC.yhat_SD, coords_NEC.d,
+    markershape = :cross,
+    color = :black,
+    label = "NEC"
+)
+scatter!(plt, coords_EC50.yhat_SD, coords_EC50.d,
+    color = :lightgray,
+    label = L"\mathrm{EC}_{50}"
+)
+
+# --- ADD LEGEND USING DUMMY POINTS ---
+# Plot invisible points with the correct color for legend
+for i in 1:4
+    scatter!(plt, [NaN], [NaN],
+             color = palette[i],
+             label = labels[i],
+             markershape = :rect,
+             markersize=20)
+end
+
+savefig(plt, joinpath(plotdir, "background_dose_response_julia.pdf"))
+println("Plot saved as background_dose_response_julia.pdf.")
