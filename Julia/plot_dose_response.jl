@@ -5,8 +5,6 @@ using Colors
 using LaTeXStrings
 using CSV
 
-include("dose_response.jl")
-
 function plot_distrib(individuals_pos, individuals_neg, individuals_null,
                      col_pos, col_neg, col_null)
 
@@ -135,64 +133,32 @@ color_pos = RGB(0.01, 0.39, 0.57)
 color_neg = RGB(0.78, 0.18, 0.16)
 color_null = RGB(0.13, 0.59, 0.12)
 
-x_0 = 4.5
-beta = -0.5
-Dose = range(0, step = 0.05, length = 101)
-NEC = 1.25
-n_id = 10_000
-CV_x = 1/x_0
-CV_nec = 0.2
-rho = 0.9
-sigma = 0.08
 
-Random.seed!(42)
+plotdir = "../outputs/figs"
 
-# --- WARMING UP FUNCTIONS --- #
+# --- LOADING DOSE RESPONSE DATA ---
+datadir = "../outputs/data"
+endings = ["pos", "neg", "null"]
+filenames = [joinpath(datadir,"dose-response_" * ending * ".csv") for ending in endings]
+filename_pos, filename_neg, filename_null = filenames
+summary_pos = CSV.read(filename_pos, DataFrame)
+summary_neg = CSV.read(filename_neg, DataFrame)
+summary_null = CSV.read(filename_null, DataFrame)
 
-println("Warming up functions...")
+# --- LOADING STABILITY DATA ---
+plotname = "fig_3_repro_julia.pdf"
+filenames = ["fig_3_data_julia.csv", "fig_3_d_vals.csv", "fig_3_sigma_vals.csv"]
+dataname, dname, sigmaname = filenames
+datafile = joinpath(datadir, dataname)
+dfile = joinpath(datadir, dname)
+sigmafile = joinpath(datadir, sigmaname)
+plotfile = joinpath(plotdir, plotname)
+df_data = CSV.read(datafile, DataFrame)
+d_vals = CSV.read(dfile, DataFrame)[:, 1]
+sigma_vals = CSV.read(sigmafile, DataFrame)[:, 1]
+data = Matrix(df_data)
+println("CSV files loaded successfully.")
 
-individuals_pos = generate_individuals(x_0, NEC, CV_x, CV_nec, rho, 10)
-individuals_neg = generate_individuals(x_0, NEC, CV_x, CV_nec, -rho, 10)
-individuals_null = generate_individuals(x_0, NEC, CV_x, CV_nec, 0, 10)
-
-# scatter_plot, hist_plot = plot_distrib(individuals_pos, individuals_neg, individuals_null, color_pos, color_neg, color_null)
-
-summary_pos = simulate_dose_response(individuals_pos, Dose, beta, sigma)
-summary_neg = simulate_dose_response(individuals_neg, Dose, beta, sigma)
-summary_null = simulate_dose_response(individuals_null, Dose, beta, sigma)
-
-# summary_plot = plot_dose_response(summary_pos, summary_neg, summary_null, color_pos, color_neg, color_null)
-
-println("Warming up complete.")
-
-# --- MAIN CODE ---
-
-individuals_pos = generate_individuals(x_0, NEC, CV_x, CV_nec, rho, n_id)
-individuals_neg = generate_individuals(x_0, NEC, CV_x, CV_nec, -rho, n_id)
-individuals_null = generate_individuals(x_0, NEC, CV_x, CV_nec, 0, n_id)
-
-# scatter_plot, hist_plot = plot_distrib(individuals_pos, individuals_neg, individuals_null, col_pos, col_neg, col_null)
-
-summary_pos = simulate_dose_response(individuals_pos, Dose, beta, sigma)
-summary_neg = simulate_dose_response(individuals_neg, Dose, beta, sigma)
-summary_null = simulate_dose_response(individuals_null, Dose, beta, sigma)
-
-# summary_plot = plot_dose_response(summary_pos, summary_neg, summary_null, col_pos, col_neg, col_null)
-
-plot_dir = "../outputs/figs"
-# savefig(scatter_plot, joinpath(plot_dir, "scatter_plot_distrib_x_NEC.pdf"))
-# println("Scatter plot of distributions saved as scatter_plot_distrib_x_NEC.pdf.")
-# savefig(hist_plot, joinpath(plot_dir, "hist_plot_distrib_x_NEC.pdf"))
-# println("Histrogram of x and NEC distributions saved as hist_plot_distrib_x_NEC.pdf.")
-# savefig(summary_plot, joinpath(plot_dir, "summary_plot_dose_response.pdf"))
-# println("Dose-response of x (mean and std) saved as summary_plot_dose_response.pdf.")
-
-println("Computation done.")
-
-# --- ADDING D VALUES ---
-summary_pos[!, "d"] = abs.(summary_pos.yhat_mean .- x_0)
-summary_neg[!, "d"] = abs.(summary_neg.yhat_mean .- x_0)
-summary_null[!, "d"] = abs.(summary_null.yhat_mean .- x_0)
 
 # --- GETTING CROPPED VALUES ---
 coords_pos = summary_pos[summary_pos.d .<= 2.5, ["yhat_SD", "d"]]
@@ -200,6 +166,8 @@ coords_neg = summary_neg[summary_neg.d .<= 2.5, ["yhat_SD", "d"]]
 coords_null = summary_null[summary_null.d .<= 2.5, ["yhat_SD", "d"]]
 
 # --- GETTING SPECIAL VALUES ---
+x_0 = 4.5
+NEC = 1.25
 function get_special_values(summary, NEC, x_0)
     coords_NEC = summary[summary.Dose .== NEC, ["yhat_SD", "d"]]
     coords_EC50 = first(summary[summary.d .>= x_0/2, ["yhat_SD", "d"]], 1)
@@ -213,22 +181,7 @@ coords_NEC = DataFrame(yhat_SD = [coords_NEC_pos.yhat_SD[1], coords_NEC_neg.yhat
 coords_EC50 = DataFrame(yhat_SD = [coords_EC50_pos.yhat_SD[1], coords_EC50_neg.yhat_SD[1], coords_EC50_null.yhat_SD[1]],
                         d = [coords_EC50_pos.d[1], coords_EC50_neg.d[1], coords_EC50_null.d[1]])
 
-# --- LOAD DATA ---
-datadir = "../outputs/data"
-plotdir = "../outputs/figs"
-plotname = "fig_3_repro_julia.pdf"
-filenames = ["fig_3_data_julia.csv", "fig_3_d_vals.csv", "fig_3_sigma_vals.csv"]
-dataname, dname, sigmaname = filenames
-datafile = joinpath(datadir, dataname)
-dfile = joinpath(datadir, dname)
-sigmafile = joinpath(datadir, sigmaname)
-plotfile = joinpath(plotdir, plotname)
-isdir(plotdir) || mdkir(plotdir)
-df_data = CSV.read(datafile, DataFrame)
-d_vals = CSV.read(dfile, DataFrame)[:, 1]
-sigma_vals = CSV.read(sigmafile, DataFrame)[:, 1]
-data = Matrix(df_data)
-println("CSV files loaded successfully.")
+
 
 # --- COLOR MAPPING ---
 palette = [
@@ -293,10 +246,10 @@ plot!(plt, coords_null.yhat_SD, coords_null.d,
 scatter!(plt, coords_NEC.yhat_SD, coords_NEC.d,
     markershape = :cross,
     color = :black,
-    label = "NEC"
+    label = L"\overline{\mathrm{NEC}}"
 )
 scatter!(plt, coords_EC50.yhat_SD, coords_EC50.d,
-    color = :lightgray,
+    color = :lightgray, markerstrokewidth = 0,
     label = L"\mathrm{EC}_{50}"
 )
 
@@ -310,5 +263,6 @@ for i in 1:4
              markersize=20)
 end
 
-savefig(plt, joinpath(plotdir, "background_dose_response_julia.pdf"))
-println("Plot saved as background_dose_response_julia.pdf.")
+plotname = joinpath(plotdir, "background_dose_response_julia.pdf")
+savefig(plt, plotname)
+println("Plot saved as $plotname.")
