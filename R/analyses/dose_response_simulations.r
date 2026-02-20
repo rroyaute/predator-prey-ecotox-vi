@@ -130,6 +130,60 @@ fig.neg.cov.sd = df.neg.cov %>%
   theme(legend.position = "none")
 fig.neg.cov.sd
 
+# Cov alpha x NEC = 0 ----
+rho_1_2 = 0 # r_alpha_beta
+rho_1_3 = 0 # r_alpha_NEC
+rho_2_3 = 0 # r_beta_NEC
+
+
+Mu = c(alpha, beta, NEC)
+sigmas = c(alpha * CV_i, beta * 0, NEC * CV_i) # 10 % CV around the mean
+rho_mat = matrix(c(1, rho_1_2, rho_1_3,
+                   rho_1_2, 1, rho_2_3,
+                   rho_1_3, rho_2_3, 1), 
+                 nrow = 3)
+
+Sigma = diag(sigmas) %*% rho_mat %*% diag(sigmas)
+
+set.seed(42)
+ID.0.cov = MASS::mvrnorm(n_id, Mu, Sigma) %>% 
+  data.frame() %>% 
+  set_names("alpha_i", "beta_i", "NEC_i") %>% 
+  mutate(ID.0.cov = 1:n_id)
+GGally::ggpairs(ID.0.cov[,c(1,3)])
+
+# Simulate individual growth
+df.0.cov = ID.0.cov %>%
+  expand(nesting(ID = ID.0.cov, alpha_i, beta_i, NEC_i), 
+         Dose = Dose) %>%
+  mutate(log_yhat = DR_fun_log(Dose, alpha_i, beta_i, NEC_i)) %>%
+  mutate(yhat = exp(log_yhat)) %>%
+  mutate(y = rlnorm(n(), log_yhat, sigma))
+
+fig.0.cov = df.0.cov %>% 
+  filter(ID %in% sample(unique(ID), 100)) %>% 
+  ggplot(aes(y = yhat, x = Dose, group = ID)) +
+  geom_line(alpha = .5, linewidth = .5, color = "#c72e29") +
+  labs(x = "Dose", y = "y response") +
+  theme_bw(14) +
+  theme(legend.position = "none")
+fig.0.cov
+
+fig.0.cov.sd = df.0.cov %>% 
+  # mutate(yhat_std = (yhat - alpha) / (CV_i * alpha)) %>% # standardised over control
+  summarise(y_i_mu = mean(yhat_std),
+            y_i_sd = sd(yhat_std), 
+            .by = c(Dose))  %>% 
+  ggplot(aes(y = y_i_sd, x = Dose)) +
+  geom_line(linewidth = 2, color = "#c72e29") +
+  # ylim(0,1) +
+  ylim(0,30) +
+  labs(x = "Dose", y = "sd y response") +
+  theme_bw(14) +
+  theme(legend.position = "none")
+fig.0.cov.sd
+
+
 # Combine figures ----
 fig.cor.pos <- 
   ggplot(ID.pos.cov,
