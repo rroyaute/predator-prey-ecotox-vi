@@ -82,7 +82,7 @@ function simulate_dose_response(individuals, dose_values, beta, sigma; rng=Rando
     summary = Vector{Dict{String, Float64}}()
     for (dose, vals) in by_dose
         yhat_values = [v["yhat"] for v in vals]
-        push!(summary, Dict(
+        push!(summary, Dict( # This is what is returned: 3 columns (dose, mean and std)
             "Dose" => dose,
             "yhat_mean" => mean(yhat_values),
             "yhat_SD" => std(yhat_values),
@@ -99,15 +99,15 @@ end
 # println(summary_pos)
 
 # --- PARAMETERS DEFINITION ---
-x_0 = 4.5
-beta = -0.5
-Dose = range(0, step = 0.05, length = 101)
-NEC = 1.25
-n_id = 10_000
-CV_x = 1/x_0
+x_0    = 4.5
+beta   = -0.5
+Dose   = range(0, step = 0.05, length = 101)
+NEC    = 1.25
+n_id   = 10_000
+CV_x   = 1/x_0
 CV_nec = 0.2
-rho = 0.9
-sigma = 0.08
+rho    = 0.9
+sigma  = 0.08
 
 Random.seed!(42)
 
@@ -115,17 +115,17 @@ Random.seed!(42)
 # --- WARMING UP FUNCTIONS ---
 println("Warming up functions...")
 individuals = generate_individuals(x_0, NEC, CV_x, CV_nec, rho, 10)
-summary = simulate_dose_response(individuals, Dose, beta, sigma)
+summary     = simulate_dose_response(individuals, Dose, beta, sigma)
 println("Warm up complete.")
 
 # --- MAIN COMPUTATION ---
 println("Starting computation.")
-individuals_pos = generate_individuals(x_0, NEC, CV_x, CV_nec, rho, n_id) # Positive covariance between x0 and NEC
-individuals_neg = generate_individuals(x_0, NEC, CV_x, CV_nec, -rho, n_id) # Negative covariance between x0 and NEC
+individuals_pos  = generate_individuals(x_0, NEC, CV_x, CV_nec, rho, n_id) # Positive covariance between x0 and NEC
+individuals_neg  = generate_individuals(x_0, NEC, CV_x, CV_nec, -rho, n_id) # Negative covariance between x0 and NEC
 individuals_null = generate_individuals(x_0, NEC, CV_x, CV_nec, 0, n_id) # x0 and NEC independent
 
-summary_pos = simulate_dose_response(individuals_pos, Dose, beta, sigma)
-summary_neg = simulate_dose_response(individuals_neg, Dose, beta, sigma)
+summary_pos  = simulate_dose_response(individuals_pos, Dose, beta, sigma)
+summary_neg  = simulate_dose_response(individuals_neg, Dose, beta, sigma)
 summary_null = simulate_dose_response(individuals_null, Dose, beta, sigma)
 
 # --- ADDING D VALUES ---
@@ -139,15 +139,15 @@ function adding_d(summary, x_0)
     summary[!, "d"] = abs.(summary.yhat_mean .- summary.yhat_mean[1])
     return summary
 end
-summary_pos = adding_d(summary_pos, x_0)
-summary_neg = adding_d(summary_neg, x_0)
+summary_pos  = adding_d(summary_pos, x_0)
+summary_neg  = adding_d(summary_neg, x_0)
 summary_null = adding_d(summary_null, x_0)
 
 println("Computation done.")
 
 # --- SAVING TO CSV ---
-datadir = "../outputs/data"
-endings = ["pos", "neg", "null"]
+datadir   = "../outputs/data"
+endings   = ["pos", "neg", "null"]
 filenames = [joinpath(datadir,"dose-response_" * ending * ".csv") for ending in endings]
 filename_pos, filename_neg, filename_null = filenames
 CSV.write(filename_pos, summary_pos)

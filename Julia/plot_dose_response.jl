@@ -9,8 +9,8 @@ function plot_distrib(individuals_pos, individuals_neg, individuals_null,
                      col_pos, col_neg, col_null)
 
     # Extract {x0, NEC} pairs for scatter plot
-    data_pos  = [(ind["x0"], ind["NEC"])  for ind in individuals_pos]
-    data_neg  = [(ind["x0"], ind["NEC"])  for ind in individuals_neg]
+    data_pos  = [(ind["x0"], ind["NEC"]) for ind in individuals_pos]
+    data_neg  = [(ind["x0"], ind["NEC"]) for ind in individuals_neg]
     data_null = [(ind["x0"], ind["NEC"]) for ind in individuals_null]
 
     # ---- Scatter plot (ListPlot analogue) ----
