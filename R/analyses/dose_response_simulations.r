@@ -231,6 +231,26 @@ fig.perc_changexsd <- df.full.mu %>%
   #ylim(0, 1.5) +
   theme_bw(14)
 
+fig.d2xsd <- df.full.mu %>%
+  ggplot(aes(
+    x = abs((y_i_mu - alpha)^2),
+    y = y_i_sd,
+    color = cov
+  )) +
+  geom_line(linewidth = 2) +
+  scale_color_manual(values = c("#c72e29", "#016392")) +
+  labs(x = "Phenotypic mismatch", y = "sd y response") +
+  #ylim(0, 1.5) +
+  theme_bw(14)
+
+ggsave(
+  "outputs/figs/fig.d2xsd.jpeg",
+  fig.d2xsd,
+  width = 24,
+  height = 20,
+  units = "cm"
+)
+
 ggsave(
   "outputs/figs/fig.perc_changexsd.jpeg",
   fig.perc_changexsd,
