@@ -8,10 +8,10 @@ using CSV
 function plot_distrib(individuals_pos, individuals_neg, individuals_null,
                      col_pos, col_neg, col_null)
 
-    # Extract {x0, NEC} pairs for scatter plot
-    data_pos  = [(ind["x0"], ind["NEC"]) for ind in individuals_pos]
-    data_neg  = [(ind["x0"], ind["NEC"]) for ind in individuals_neg]
-    data_null = [(ind["x0"], ind["NEC"]) for ind in individuals_null]
+    # Extract {ymax, NEC} pairs for scatter plot
+    data_pos  = [(ind["ymax"], ind["NEC"]) for ind in individuals_pos]
+    data_neg  = [(ind["ymax"], ind["NEC"]) for ind in individuals_neg]
+    data_null = [(ind["ymax"], ind["NEC"]) for ind in individuals_null]
 
     # ---- Scatter plot (ListPlot analogue) ----
     plt_scatter = scatter(
@@ -44,13 +44,13 @@ function plot_distrib(individuals_pos, individuals_neg, individuals_null,
     # ---- SmoothHistogram analogue using density() ----
 
     # Extract components for KDE
-    pos_x0  = [ind["x0"]  for ind in individuals_pos]
+    pos_ymax  = [ind["ymax"]  for ind in individuals_pos]
     pos_NEC = [ind["NEC"] for ind in individuals_pos]
 
-    neg_x0  = [ind["x0"]  for ind in individuals_neg]
+    neg_ymax  = [ind["ymax"]  for ind in individuals_neg]
     neg_NEC = [ind["NEC"] for ind in individuals_neg]
 
-    null_x0 = [ind["x0"]  for ind in individuals_null]
+    null_ymax = [ind["ymax"]  for ind in individuals_null]
     null_NEC = [ind["NEC"] for ind in individuals_null]
 
     plt_density = plot(
@@ -60,15 +60,15 @@ function plot_distrib(individuals_pos, individuals_neg, individuals_null,
     )
 
     # Positive
-    density!(plt_density, pos_x0,  color=col_pos,  lw=2, label="Positive cov (x₀)")
+    density!(plt_density, pos_ymax,  color=col_pos,  lw=2, label="Positive cov (x₀)")
     density!(plt_density, pos_NEC, color=col_pos,  lw=2, linestyle=:dash, label="Positive cov (NEC)")
 
     # Negative
-    density!(plt_density, neg_x0,  color=col_neg,  lw=2, label="Negative cov (x₀)")
+    density!(plt_density, neg_ymax,  color=col_neg,  lw=2, label="Negative cov (x₀)")
     density!(plt_density, neg_NEC, color=col_neg,  lw=2, linestyle=:dash, label="Negative cov (NEC)")
 
     # Null
-    density!(plt_density, null_x0,  color=col_null, lw=2, label="Null cov (x₀)")
+    density!(plt_density, null_ymax,  color=col_null, lw=2, label="Null cov (x₀)")
     density!(plt_density, null_NEC, color=col_null, lw=2, linestyle=:dash, label="Null cov (NEC)")
 
     return plt_scatter, plt_density
@@ -134,10 +134,12 @@ color_neg = RGB(0.78, 0.18, 0.16)
 color_null = RGB(0.13, 0.59, 0.12)
 
 
-plotdir = "../outputs/figs"
+plotdir = joinpath(@__DIR__, "..", "outputs", "figs")
+mkpath(plotdir)
 
 # --- LOADING DOSE RESPONSE DATA ---
-datadir = "../outputs/data"
+datadir = joinpath(@__DIR__, "..", "outputs", "data")
+mkpath(datadir)
 endings = ["pos", "neg", "null"]
 filenames = [joinpath(datadir,"dose-response_" * ending * ".csv") for ending in endings]
 filename_pos, filename_neg, filename_null = filenames
@@ -166,16 +168,16 @@ coords_neg = summary_neg[summary_neg.d .<= 2.5, ["yhat_SD", "d"]]
 coords_null = summary_null[summary_null.d .<= 2.5, ["yhat_SD", "d"]]
 
 # --- GETTING SPECIAL VALUES ---
-x_0 = 4.5
-NEC = 1.25
-function get_special_values(summary, NEC, x_0)
+y_max = 10
+NEC = 25
+function get_special_values(summary, NEC, y_max)
     coords_NEC = summary[summary.Dose .== NEC, ["yhat_SD", "d"]]
-    coords_EC50 = first(summary[summary.d .>= x_0/2, ["yhat_SD", "d"]], 1)
+    coords_EC50 = first(summary[summary.d .>= y_max/2, ["yhat_SD", "d"]], 1)
     return coords_NEC, coords_EC50
 end
-coords_NEC_pos, coords_EC50_pos = get_special_values(summary_pos, NEC, x_0)
-coords_NEC_neg, coords_EC50_neg = get_special_values(summary_neg, NEC, x_0)
-coords_NEC_null, coords_EC50_null = get_special_values(summary_null, NEC, x_0)
+coords_NEC_pos, coords_EC50_pos = get_special_values(summary_pos, NEC, y_max)
+coords_NEC_neg, coords_EC50_neg = get_special_values(summary_neg, NEC, y_max)
+coords_NEC_null, coords_EC50_null = get_special_values(summary_null, NEC, y_max)
 coords_NEC = DataFrame(yhat_SD = [coords_NEC_pos.yhat_SD[1], coords_NEC_neg.yhat_SD[1], coords_NEC_null.yhat_SD[1]],
                        d = [coords_NEC_pos.d[1], coords_NEC_neg.d[1], coords_NEC_null.d[1]])
 coords_EC50 = DataFrame(yhat_SD = [coords_EC50_pos.yhat_SD[1], coords_EC50_neg.yhat_SD[1], coords_EC50_null.yhat_SD[1]],
