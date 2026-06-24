@@ -85,15 +85,15 @@ function simulate_dose_response(individuals, dose_values, beta, sigma; rng=Rando
 end
 
 # --- PARAMETERS DEFINITION ---
-y_max = 100  # trait value for dose = 0 (ymax)
+y_max = 10  # trait value for dose = 0 (ymax)
 beta = -3.5
 Dose = range(0, 100)
 NEC = 25
 n_id = 10_000
-CV_y = 0.2
-CV_nec = 0.2
-sigma = 0.08
-rho = 0.9
+CV_y = 0.1
+CV_nec = 0.1
+sigma = y_max*0.08
+rho = 0.8
 
 Random.seed!(42)
 
