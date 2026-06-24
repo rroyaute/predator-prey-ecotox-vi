@@ -11,16 +11,16 @@ Generates the populations and computes the average dose-response from individual
 
 
 # --- DOSE RESPONSE FUNCTIONS ---
-function dr_log_rn_fun(dose, ymax, beta, nec)
-    logyhat = ymax * exp(-exp(beta) * (x - nec) * (x > nec))
+function dr_log_rn_fun(dose, ymax, beta, nec) # Threshold dose-response for trait y along dose gradient x
+    logyhat = ymax * exp(-exp(beta) * (dose - nec) * (dose > nec)) # y is defined by a maximum trait value y_max and is strictly positive
     return exp(logyhat)
 end
 
-function dr_fun_log(dose, alpha, beta, nec)
+function dr_fun_log(dose, ymax, beta, nec)
     if dose < nec
-        return log(alpha)
+        return log(ymax)
     else
-        return log(alpha) - exp(beta) * (dose - nec)
+        return log(ymax) - exp(beta) * (dose - nec)
     end
 end
 
@@ -28,9 +28,9 @@ dr_fun_log_exp(dose, alpha, beta, nec) = exp(dr_fun_log(dose, alpha, beta, nec))
 
 
 # --- RANDOM POPULATION GENERATION ---
-function generate_individuals(y0, nec, CVx, CVnec, rho, nID; rng = Random.default_rng())
+function generate_individuals(y0, nec, CVy, CVnec, rho, nID; rng = Random.default_rng())
     mu = [y0, nec]
-    sigmas = [y0 * CVx, nec * CVnec]
+    sigmas = [y0 * CVy, nec * CVnec]
     rho_mat = [1.0 rho; rho 1.0]
     sigma_mat = Diagonal(sigmas) * rho_mat * Diagonal(sigmas)
     dist = MvNormal(mu, sigma_mat)
@@ -47,14 +47,14 @@ end
 # Dose = range(0, 100)
 # NEC = 25
 # n_id = 10_000
-# CV_x = 0.2
+# CV_y = 0.2
 # CV_nec = 0.2
 # sigma = 0.08
 # rho = 0.9
 
-# individuals_pos = generate_individuals(y_0, NEC, CV_x, CV_nec, rho, n_id)
-# individuals_neg = generate_individuals(y_0, NEC, CV_x, CV_nec, -rho, n_id)
-# individuals_null = generate_individuals(y_0, NEC, CV_x, CV_nec, 0, n_id)
+# individuals_pos = generate_individuals(y_0, NEC, CV_y, CV_nec, rho, n_id)
+# individuals_neg = generate_individuals(y_0, NEC, CV_y, CV_nec, -rho, n_id)
+# individuals_null = generate_individuals(y_0, NEC, CV_y, CV_nec, 0, n_id)
 # println(individuals_pos)
 
 
@@ -104,7 +104,7 @@ beta   = -0.5
 Dose   = range(0, step = 0.05, length = 101)
 NEC    = 1.25
 n_id   = 10_000
-CV_x   = 1/y_0
+CV_y   = 1/y_0
 CV_nec = 0.2
 rho    = 0.9
 sigma  = 0.08
@@ -114,15 +114,15 @@ Random.seed!(42)
 
 # --- WARMING UP FUNCTIONS ---
 println("Warming up functions...")
-individuals = generate_individuals(y_0, NEC, CV_x, CV_nec, rho, 10)
+individuals = generate_individuals(y_0, NEC, CV_y, CV_nec, rho, 10)
 summary     = simulate_dose_response(individuals, Dose, beta, sigma)
 println("Warm up complete.")
 
 # --- MAIN COMPUTATION ---
 println("Starting computation.")
-individuals_pos  = generate_individuals(y_0, NEC, CV_x, CV_nec, rho, n_id) # Positive covariance between y0 and NEC
-individuals_neg  = generate_individuals(y_0, NEC, CV_x, CV_nec, -rho, n_id) # Negative covariance between y0 and NEC
-individuals_null = generate_individuals(y_0, NEC, CV_x, CV_nec, 0, n_id) # y0 and NEC independent
+individuals_pos  = generate_individuals(y_0, NEC, CV_y, CV_nec, rho, n_id) # Positive covariance between y0 and NEC
+individuals_neg  = generate_individuals(y_0, NEC, CV_y, CV_nec, -rho, n_id) # Negative covariance between y0 and NEC
+individuals_null = generate_individuals(y_0, NEC, CV_y, CV_nec, 0, n_id) # y0 and NEC independent
 
 summary_pos  = simulate_dose_response(individuals_pos, Dose, beta, sigma)
 summary_neg  = simulate_dose_response(individuals_neg, Dose, beta, sigma)
