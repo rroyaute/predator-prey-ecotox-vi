@@ -57,7 +57,7 @@ results_flat = pmap(pair -> classifying(pair[1], pair[2]), pairs_flat) # Actual 
 end_time = now()
 elapsed = end_time - start_time
 println("Parallel computation complete.")
-println("Elapsed time: $(Dates.value(elapsed)/1e3) seconds (~$(Dates.value(elapsed)/1e3/60) minutes)")
+println("Elapsed time: $(round(Dates.value(elapsed)/1e3,digits=2)) seconds (~$(round(Dates.value(elapsed)/1e3/60,digits=2)) minutes)")
 
 # --- RESHAPE RESULTS ---
 data = reshape(results_flat, length(d_vals), length(sigma_vals)) # Ensures the d are the first dimension of the 2-D data

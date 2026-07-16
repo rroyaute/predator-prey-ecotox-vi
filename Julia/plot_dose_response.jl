@@ -254,6 +254,7 @@ scatter!(plt, coords_EC50.yhat_SD, coords_EC50.d,
     color = :lightgray, markerstrokewidth = 0,
     label = L"\mathrm{EC}_{50}"
 )
+# println(coords_EC50.yhat_SD, coords_EC50.d)
 
 # --- ADD LEGEND USING DUMMY POINTS ---
 # Plot invisible points with the correct color for legend

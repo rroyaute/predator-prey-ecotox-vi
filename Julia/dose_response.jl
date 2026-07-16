@@ -121,8 +121,8 @@ all 3 populations, or as the difference between yhat_mean and yhat_mean[1] (valu
 which is different within the 3 populations (due to random population generation).
 """
 function adding_d(summary, y_max)
-    # summary[!, "d"] = abs.(summary.yhat_mean .- y_max)
-    summary[!, "d"] = abs.(summary.yhat_mean .- summary.yhat_mean[1])
+    summary[!, "d"] = abs.(summary.yhat_mean .- y_max)
+    # summary[!, "d"] = abs.(summary.yhat_mean .- summary.yhat_mean[1])
     return summary
 end
 summary_pos  = adding_d(summary_pos, y_max)
