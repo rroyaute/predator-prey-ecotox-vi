@@ -3,13 +3,13 @@ using Roots
 using LinearAlgebra
 
 # Probability distribution
-pdist(x, X, sigma) = (1 / sqrt(2π * sigma)) * exp(-(x - X)^2 / (2sigma))
+pdist(y, Y, sigma) = (1 / sqrt(2π * sigma)) * exp(-(y - Y)^2 / (2sigma))
 
 # Attack rate
-attack(x, a, alpha, tau) = alpha * exp(-(x - a)^2 / (2tau^2))
+attack(y, a, alpha, tau) = alpha * exp(-(y - a)^2 / (2tau^2))
 
 # Handling rate
-handling(x, h, eta_min, eta_max, nu) = eta_max .- (eta_max .- eta_min) * exp(-(x - h)^2 / (2nu^2))
+handling(y, h, eta_min, eta_max, nu) = eta_max .- (eta_max .- eta_min) * exp(-(y - h)^2 / (2nu^2))
 
 # Parameter values (translated from Mathematica `params_gen`)
 params_gen = (
@@ -22,30 +22,30 @@ params_gen = (
     nu      = 1,
     k       = 1,
     beta    = 0.1,
-    X       = 3,
+    Y       = 3,
     a       = 2.5,
     h       = 2.5,
     sigma   = sqrt(3)
 )
 
 # Integral 1 (equivalent to Int1)
-function int_1(R, a, alpha, tau, h, eta_min, eta_max, nu, X, sigma)
-    f(x) = (attack(x, a, alpha, tau) /
-           (1 + attack(x, a, alpha, tau) * handling(x, h, eta_min, eta_max, nu) * R)) *
-           pdist(x, X, sigma)
-    val, _ = quadgk(f, -Inf, Inf) # This evaluates the integral of the function f(x) from -Inf to +Inf
+function int_1(R, a, alpha, tau, h, eta_min, eta_max, nu, Y, sigma)
+    f(y) = (attack(y, a, alpha, tau) /
+           (1 + attack(y, a, alpha, tau) * handling(y, h, eta_min, eta_max, nu) * R)) *
+           pdist(y, Y, sigma)
+    val, _ = quadgk(f, -Inf, Inf) # This evaluates the integral of the function f(y) from -Inf to +Inf
     return val
 end
 
 # Integral 2 (equivalent to Int2)
-function int_2(R, a, alpha, tau, h, eta_min, eta_max, nu, X, sigma)
-    f(x) = begin
-        atk = attack(x, a, alpha, tau)
-        hnd = handling(x, h, eta_min, eta_max, nu)
+function int_2(R, a, alpha, tau, h, eta_min, eta_max, nu, Y, sigma)
+    f(y) = begin
+        atk = attack(y, a, alpha, tau)
+        hnd = handling(y, h, eta_min, eta_max, nu)
         denom = 1 + atk * hnd * R
-        pd = pdist(x, X, sigma)
+        pd = pdist(y, Y, sigma)
         term = 1 - (atk * hnd * R) / denom
-        (atk / denom) * pd * term # This is the value of f(x)
+        (atk / denom) * pd * term # This is the value of f(y)
     end
     val, _ = quadgk(f, -Inf, Inf)
     return val
@@ -53,8 +53,8 @@ end
 
 
 # Function whose root we solve for (FNum)
-function f_num(R, a, alpha, tau, h, eta_min, eta_max, nu, X, sigma, beta, epsilon)
-    R * int_1(R, a, alpha, tau, h, eta_min, eta_max, nu, X, sigma) - beta / epsilon
+function f_num(R, a, alpha, tau, h, eta_min, eta_max, nu, Y, sigma, beta, epsilon)
+    R * int_1(R, a, alpha, tau, h, eta_min, eta_max, nu, Y, sigma) - beta / epsilon
 end
 
 # # Solve for R (equivalent to FindRoot)
@@ -62,7 +62,7 @@ end
 #     R -> f_num(R,
 #                params_gen.a, params_gen.alpha, params_gen.tau,
 #                params_gen.h, params_gen.eta_min, params_gen.eta_max, params_gen.nu,
-#                params_gen.X, params_gen.sigma,
+#                params_gen.Y, params_gen.sigma,
 #                params_gen.beta, params_gen.epsilon),
 #     0.5
 # )
@@ -72,7 +72,7 @@ end
 #        (R_sol * int_1(R_sol,
 #                      params_gen.a, params_gen.alpha, params_gen.tau,
 #                      params_gen.h, params_gen.eta_min, params_gen.eta_max, params_gen.nu,
-#                      params_gen.X, params_gen.sigma)
+#                      params_gen.Y, params_gen.sigma)
 #        )
 
 # # println("R_sol = ", R_sol)
@@ -81,19 +81,19 @@ end
 # j11 = params_gen.r * (1 - (2 * R_sol) / params_gen.k) -
 #        C_sol * int_2(R_sol, params_gen.a, params_gen.alpha, params_gen.tau,
 #                     params_gen.h, params_gen.eta_min, params_gen.eta_max, params_gen.nu,
-#                     params_gen.X, params_gen.sigma)
+#                     params_gen.Y, params_gen.sigma)
 
 # j12 = -R_sol * int_1(R_sol, params_gen.a, params_gen.alpha, params_gen.tau,
 #                     params_gen.h, params_gen.eta_min, params_gen.eta_max, params_gen.nu,
-#                     params_gen.X, params_gen.sigma)
+#                     params_gen.Y, params_gen.sigma)
 
 # j21 = params_gen.epsilon * C_sol * int_2(R_sol, params_gen.a, params_gen.alpha, params_gen.tau,
 #                                         params_gen.h, params_gen.eta_min, params_gen.eta_max, params_gen.nu,
-#                                         params_gen.X, params_gen.sigma)
+#                                         params_gen.Y, params_gen.sigma)
 
 # j22 = params_gen.epsilon * R_sol * int_1(R_sol, params_gen.a, params_gen.alpha, params_gen.tau,
 #                                         params_gen.h, params_gen.eta_min, params_gen.eta_max, params_gen.nu,
-#                                         params_gen.X, params_gen.sigma) - params_gen.beta
+#                                         params_gen.Y, params_gen.sigma) - params_gen.beta
 
 # jacobian_at_eq = [
 #     j11  j12;
@@ -115,8 +115,8 @@ function eq_sol(d_val, sigma_val)
     params_spec = merge(
         params_gen,
         (
-            a     = params_gen.X - d_val,
-            h     = params_gen.X - d_val,
+            a     = params_gen.Y - d_val,
+            h     = params_gen.Y - d_val,
             sigma = sigma_val
         )
     )
@@ -129,7 +129,7 @@ function eq_sol(d_val, sigma_val)
         params_spec.eta_min,
         params_spec.eta_max,
         params_spec.nu,
-        params_spec.X,
+        params_spec.Y,
         params_spec.sigma,
         params_spec.beta,
         params_spec.epsilon
@@ -141,7 +141,7 @@ function eq_sol(d_val, sigma_val)
                 R_sol,
                 params_spec.a, params_spec.alpha, params_spec.tau,
                 params_spec.h, params_spec.eta_min, params_spec.eta_max, params_spec.nu,
-                params_spec.X, params_spec.sigma
+                params_spec.Y, params_spec.sigma
             )
         )
     return R_sol, C_sol
@@ -156,8 +156,8 @@ function det_tr(d_val, sigma_val, sol)
     params_spec = merge(
         params_gen,
         (
-            a     = params_gen.X - d_val,
-            h     = params_gen.X - d_val,
+            a     = params_gen.Y - d_val,
+            h     = params_gen.Y - d_val,
             sigma = sigma_val
         )
     )
@@ -165,22 +165,22 @@ function det_tr(d_val, sigma_val, sol)
         C_sol * int_2(
             R_sol, params_spec.a, params_spec.alpha, params_spec.tau,
             params_spec.h, params_spec.eta_min, params_spec.eta_max, params_spec.nu,
-            params_spec.X, params_spec.sigma
+            params_spec.Y, params_spec.sigma
         )
     j12 = -R_sol * int_1(
         R_sol, params_spec.a, params_spec.alpha, params_spec.tau,
         params_spec.h, params_spec.eta_min, params_spec.eta_max, params_spec.nu,
-        params_spec.X, params_spec.sigma
+        params_spec.Y, params_spec.sigma
     )
     j21 = params_spec.epsilon * C_sol * int_2(
         R_sol, params_spec.a, params_spec.alpha, params_spec.tau,
         params_spec.h, params_spec.eta_min, params_spec.eta_max, params_spec.nu,
-        params_spec.X, params_spec.sigma
+        params_spec.Y, params_spec.sigma
     )
     j22 = params_spec.epsilon * R_sol * int_1(
         R_sol, params_spec.a, params_spec.alpha, params_spec.tau,
         params_spec.h, params_spec.eta_min, params_spec.eta_max, params_spec.nu,
-        params_spec.X, params_spec.sigma
+        params_spec.Y, params_spec.sigma
     ) - params_spec.beta
     jacobian_at_eq = [
         j11  j12;
